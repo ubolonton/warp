@@ -31,7 +31,7 @@ pagerID = "pager%d" % gc
 jQuery(document).ready(function(){ 
 
   function delLinkFormatter (cellvalue, options, rowObject) {
-    return '[<a href="#" onclick="if (confirm(\'Delete?\')) { $.post(\'${url(crudNode, "delete")}/' + rowObject[0] + '\', {}, function() { $(\'#${listID}\').trigger(\'reloadGrid\'); }); }; return false" style="color: red">Del</a>]';
+    return '[<a href="#" onclick="if (confirm(\'Delete?\')) { $.post(\'${url(crudNode, "delete")}/' + options['rowId'] + '\', {}, function() { $(\'#${listID}\').trigger(\'reloadGrid\'); }); }; return false" style="color: red">Del</a>]';
   }
 
   var grid = jQuery("#${listID}").jqGrid({
