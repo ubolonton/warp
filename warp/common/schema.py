@@ -7,28 +7,29 @@ from schemup import commands, validator
 
 stormSchema = storm.StormSchema()
 
-def getWarpMigrationsDir(store=avatar_store):
+def getConnectionClassName(store):
+    return store._connection.__class__.__name__
+
+def getWarpMigrationsDir(store):
     return config["warpDir"].child("migrations").child({
         "PostgresConnection": "postgres",
         # NTA FIX XXX: schemup does not support sqlite yet
         "SQLiteConnection": "sqlite",
         "MySQLConnection": "mysql"
-    }[store._connection.__class__.__name__])
+    }[getConnectionClassName(store)])
 
-def getClass(store=avatar_store):
-    name = store._connection.__class__.__name__
+# NTA: This probably belongs in schemup
+def makeSchema(store, dryRun=False):
+    name = getConnectionClassName(store)
     if name == "PostgresConnection":
         from schemup.dbs.postgres import PostgresSchema
-        return PostgresSchema
+        schemaClass = PostgresSchema
     elif name == "MySQLConnection":
         from schemup.dbs.mysql import MysqlSchema
-        return MysqlSchema
+        schemaClass = MysqlSchema
     else:
-        raise Exception("Unsupported DB")
+        return None
 
-def makeSchema(store=avatar_store, dryRun=False):
-    schemaClass = getClass()
-    # return schemaClass(store._connection._raw_connection, dryRun=dryRun)
     return schemaClass(store.get_database().raw_connect(), dryRun=dryRun)
 
 # NTA TODO: All DB-related config should be grouped together
@@ -70,6 +71,11 @@ def loadMigrations(store=avatar_store, config=config):
 
 def snapshot(store=avatar_store, config=config, dryRun=False):
     schema = makeSchema(store, dryRun)
+    if schema is None:
+        print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        print "Migrations not supported for", getConnectionClassName(store)
+        return
+
     loadMigrations(store, config)
 
     schema.ensureSchemaTable()
@@ -77,11 +83,16 @@ def snapshot(store=avatar_store, config=config, dryRun=False):
 
 def migrate(store=avatar_store, config=config, dryRun=False):
     schema = makeSchema(store, dryRun)
+    if schema is None:
+        print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        print "Migrations not supported for", getConnectionClassName(store)
+        return
+
     schema.ensureSchemaTable()
 
+    # Make sure the real schema is what schemup_tables says it is
     print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     print "Checking schema integrity"
-    # Make sure the real schema is what schemup_tables says it is
     mismatches = validator.findSchemaMismatches(schema)
     # NTA TODO: Pretty print
     if mismatches:
