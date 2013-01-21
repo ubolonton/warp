@@ -134,7 +134,7 @@ def loadConfig(options):
 # Pre-defined commands -----------------------------------------------
 
 
-class SkeletonOptions(Options):
+class SkeletonOptions(usage.Options):
     optParameters = (
         ("siteDir", "d", ".", "Base directory of the warp site to generate"),
     )
@@ -192,7 +192,7 @@ def command(options, function):
     obj()
 
 
-class SchemaOptions(Options):
+class SchemaOptions(usage.Options):
     optFlags = (
         ("dryRun", "n", "Do a dry-run instead of changing the DB for real"),
     )
