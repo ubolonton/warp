@@ -34,7 +34,11 @@ def makeSchema(store=avatar_store, dryRun=False):
 # NTA TODO: All DB-related config should be grouped together
 def getConfig(config=config):
     schemaConfig = {
-        "migrations_dir": config["siteDir"].child("migrations")
+        # Directory storing site's DB migrations
+        # (twisted.python.filepath.FilePath)
+        "migrations_dir": config["siteDir"].child("migrations"),
+        # Whether to check schema on startup
+        "check": True,
     }
     schemaConfig.update(config.get("schema", {}))
     return schemaConfig
