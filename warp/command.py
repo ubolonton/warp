@@ -16,6 +16,10 @@ class Options(usage.Options):
         ("config", "w", "warpconfig", "Config filename"),
     )
 
+    optFlags = (
+        ("skipSchemaCheck", "x", "Don't check schema integrity"),
+    )
+
     subCommands = []
 
 
@@ -25,8 +29,7 @@ _commands = {}
 # options are parsed app-specific information is not available yet.
 # A hacky workaround would be some code in twisted.warp_plugin to
 # import a "magic" app-defined module
-def register(shortName=None, skipConfig=False, needStartup=False, checkSchema=True,
-             optionsParser=None):
+def register(shortName=None, skipConfig=False, needStartup=False, optionsParser=None):
     """Decorator to register functions as commands. Functions must
     accept options map as the first parameter.
 
@@ -67,10 +70,8 @@ def register(shortName=None, skipConfig=False, needStartup=False, checkSchema=Tr
         def wrapped(options):
             if not skipConfig:
                 loadConfig(options)
-            # NTA FIX: schema checking and startup should be separated
-            # (do it after making normal site running into a command)
             if needStartup:
-                doStartup(options, checkSchema)
+                doStartup(options)
             fn(options, *options.subOptions.get("args", ()))
 
         _commands[name] = wrapped
@@ -92,10 +93,11 @@ def getSiteDir(options):
     return FilePath(options['siteDir'])
 
 
-def doStartup(options, checkSchema = True):
+def doStartup(options):
     """Utility function to execute the startup function, after
     checking the schema if necessary"""
-    if checkSchema:
+    from warp.common.schema import getConfig
+    if getConfig()["check"]:
         from warp.common import schema
         schema.migrate()
 
@@ -112,8 +114,14 @@ def loadConfig(options):
     configModule = reflect.namedModule(options['config'])
     config = configModule.config
     runtime.config.update(config)
+
     runtime.config['siteDir'] = siteDir
     runtime.config['warpDir'] = FilePath(runtime.__file__).parent()
+
+    if options["skipSchemaCheck"]:
+        runtime.config["schema"] = runtime.config.get("schema", {})
+        runtime.config["schema"]["check"] = False
+
     store.setupStore()
     translate.loadMessages()
 
