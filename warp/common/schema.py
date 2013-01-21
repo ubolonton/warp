@@ -42,12 +42,16 @@ def getConfig(config=config):
 
 
 def loadWarpMigrations(store=avatar_store):
+    print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    print "Loading warp migrations"
     warpMigrationsDir = getWarpMigrationsDir(store)
     if not warpMigrationsDir.isdir():
         raise Exception("Warp migrations dir not found")
     commands.load(warpMigrationsDir.path)
 
 def loadSiteMigrations(config=config):
+    print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    print "Loading site migrations"
     schemaConfig = getConfig(config)
     siteMigrationsDir = schemaConfig["migrations_dir"]
     # NTA TODO: Blow up otherwise?
@@ -71,6 +75,8 @@ def migrate(store=avatar_store, config=config, dryRun=False):
     schema = makeSchema(store, dryRun)
     schema.ensureSchemaTable()
 
+    print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    print "Checking schema integrity"
     # Make sure the real schema is what schemup_tables says it is
     mismatches = validator.findSchemaMismatches(schema)
     # NTA TODO: Pretty print
@@ -92,5 +98,9 @@ def migrate(store=avatar_store, config=config, dryRun=False):
     commands.validate(schema, stormSchema)
 
     if not dryRun:
-        print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-        print "Migrated successfully"
+        if sqls:
+            print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+            print "Migrated successfully"
+        else:
+            print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+            print "Schema up-to-date"
