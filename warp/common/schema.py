@@ -48,7 +48,7 @@ def getConfig(config=config):
 
 def loadWarpMigrations(store=avatar_store):
     print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    print "Loading warp migrations"
+    print "Loading warp migrations..."
     warpMigrationsDir = getWarpMigrationsDir(store)
     if not warpMigrationsDir.isdir():
         raise Exception("Warp migrations dir not found")
@@ -56,7 +56,7 @@ def loadWarpMigrations(store=avatar_store):
 
 def loadSiteMigrations(config=config):
     print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    print "Loading site migrations"
+    print "Loading site migrations..."
     schemaConfig = getConfig(config)
     siteMigrationsDir = schemaConfig["migrations_dir"]
     # NTA TODO: Blow up otherwise?
@@ -92,7 +92,7 @@ def migrate(store=avatar_store, config=config, dryRun=False):
 
     # Make sure the real schema is what schemup_tables says it is
     print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    print "Checking schema integrity"
+    print "Checking schema integrity..."
     mismatches = validator.findSchemaMismatches(schema)
     # NTA TODO: Pretty print
     if mismatches:
@@ -103,19 +103,24 @@ def migrate(store=avatar_store, config=config, dryRun=False):
 
     loadMigrations(store, config)
 
+    print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    print "Upgrading..."
     sqls = commands.upgrade(schema, stormSchema)
-    if dryRun and sqls:
-        print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-        for sql in sqls: print sql
-        print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
     # Sanity checking
-    commands.validate(schema, stormSchema)
-
     if not dryRun:
-        if sqls:
-            print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-            print "Migrated successfully"
-        else:
-            print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-            print "Schema up-to-date"
+        commands.validate(schema, stormSchema)
+
+    if not sqls:
+        print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        print "Schema up-to-date"
+    elif dryRun:
+        print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        for sql in sqls:
+            print ""
+            print sql
+    else:
+        print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        print "Migrated successfully"
+
+    print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
