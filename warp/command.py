@@ -190,3 +190,21 @@ def command(options, function):
     "Run a site-specific command"
     obj = reflect.namedObject(function)
     obj()
+
+
+class SchemaOptions(Options):
+    optFlags = (
+        ("dryRun", "n", "Do a dry-run instead of changing the DB for real"),
+    )
+
+@register(optionsParser = SchemaOptions)
+def snapshotSchema(options):
+    "Snapshot the DB schema (useful for converting existing projects)"
+    from warp.common import schema
+    schema.snapshot(dryRun = True if options.subOptions["dryRun"] else False)
+
+@register(optionsParser = SchemaOptions)
+def migrate(options):
+    "Migrate the DB to meet the code's expectation"
+    from warp.common import schema
+    schema.migrate(dryRun = True if options.subOptions["dryRun"] else False)
