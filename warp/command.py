@@ -25,7 +25,8 @@ _commands = {}
 # options are parsed app-specific information is not available yet.
 # A hacky workaround would be some code in twisted.warp_plugin to
 # import a "magic" app-defined module
-def register(shortName=None, skipConfig=False, needStartup=False, optionsParser=None):
+def register(shortName=None, skipConfig=False, needStartup=False, checkSchema=True,
+             optionsParser=None):
     """Decorator to register functions as commands. Functions must
     accept options map as the first parameter.
 
@@ -66,8 +67,10 @@ def register(shortName=None, skipConfig=False, needStartup=False, optionsParser=
         def wrapped(options):
             if not skipConfig:
                 loadConfig(options)
+            # NTA FIX: schema checking and startup should be separated
+            # (do it after making normal site running into a command)
             if needStartup:
-                doStartup(options)
+                doStartup(options, checkSchema)
             fn(options, *options.subOptions.get("args", ()))
 
         _commands[name] = wrapped
@@ -89,8 +92,13 @@ def getSiteDir(options):
     return FilePath(options['siteDir'])
 
 
-def doStartup(options):
-    """Utility function to execute the startup function"""
+def doStartup(options, checkSchema = True):
+    """Utility function to execute the startup function, after
+    checking the schema if necessary"""
+    if checkSchema:
+        from warp.common import schema
+        schema.migrate()
+
     configModule = reflect.namedModule(options['config'])
     if hasattr(configModule, 'startup'):
         configModule.startup()
