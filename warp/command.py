@@ -143,7 +143,7 @@ def skeleton(options):
     "Copy Warp site skeleton into current directory"
     from warp.tools import skeleton
     print 'Creating skeleton...'
-    siteDir = getSiteDir(options.subOptions) or getSiteDir(options)
+    siteDir = getSiteDir(options)
     skeleton.createSkeleton(siteDir)
 
 
