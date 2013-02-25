@@ -22,7 +22,7 @@ class BaseProxy(object):
 
     def render_view(self, request):
         return unicode(getattr(self.obj, self.col) or "")
-    
+
     def render_edit(self, request):
         return u'<input type="text" name="warpform-%s" value="%s" />' % (
             self.fieldName(),
@@ -34,7 +34,7 @@ class BaseProxy(object):
             setattr(self.obj, self.col, val)
         except (TypeError, ValueError):
             return u"Invalid value"
-            
+
 
 
 class StringProxy(BaseProxy):
@@ -50,7 +50,7 @@ class RawStringProxy(BaseProxy):
 
     def render_view(self, request):
         return (getattr(self.obj, self.col) or "").decode(self.encoding)
-    
+
     def render_edit(self, request):
         return u'<input type="text" name="warpform-%s" value="%s" />' % (
             self.fieldName(),
@@ -82,7 +82,7 @@ class AreaProxy(StringProxy):
 
     def render_view(self, request):
         return u'<div style="">%s</div>' % unicode(getattr(self.obj, self.col) or "")
-    
+
     def render_edit(self, request):
         return u'<textarea name="warpform-%s" cols="%s" rows="%s">%s</textarea>' % (
             self.fieldName(), self.cols, self.rows,
@@ -90,7 +90,7 @@ class AreaProxy(StringProxy):
 
 
 class HTMLAreaProxy(StringProxy):
-    
+
     def render_edit(self, request):
         return u'<textarea name="warpform-%s" cols="80" rows="20" class="markItUp">%s</textarea>' % (
             self.fieldName(),
@@ -165,7 +165,7 @@ class FloatProxy(BaseProxy):
 
 
 class YearDateProxy(BaseProxy):
-    
+
     months = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
@@ -187,7 +187,7 @@ class YearDateProxy(BaseProxy):
         def _sel(a, b):
             if a == b: return ' selected="selected"'
             else: return ''
-                
+
         dayField = u'<select name="warpform-%s" class="warpform-stringset">%s</select>' % (
             fieldName, "".join('<option value="%s"%s>%s</option>' % (d, _sel(d, val.day), d)
                                for d in range(1, 32)))
@@ -213,7 +213,7 @@ class YearDateProxy(BaseProxy):
             dt = date(y, m, d)
         except ValueError:
             return u"Value '%s-%s-%s' is not a valid date" % (d, m, y)
-                
+
         setattr(self.obj, self.col, dt)
 
 
@@ -267,7 +267,7 @@ jQuery(document).ready(function($) { $("#date-field-%s").datepicker(); });
                     .date())
         except ValueError:
             return u"Value '%s' didn't match format '%s'" % (val, self.dateFormat)
-                
+
         setattr(self.obj, self.col, self.to_db(date))
 
 
@@ -313,7 +313,7 @@ class ImageProxy(BaseProxy):
 
     def render_view(self, request):
         return '<img src="%s" />' % url(
-            request.node, "image", 
+            request.node, "image",
             (self.obj.__class__.__name__, self.obj.id, self.col))
 
 
@@ -377,13 +377,14 @@ class PriceProxy(BaseProxy):
 
 class ReferenceProxy(BaseProxy):
 
-    def __init__(self, obj, col, allowNone=False, conditions=(), default=None):
+    def __init__(self, obj, col, allowNone=False, conditions=(), default=None,
+                 editTemplate="/crud/proxy/reference_edit.mak"):
         self.obj = obj
         self.col = col
         self.allowNone = allowNone
         self.conditions = conditions
         self.default = default
-
+        self.editTemplate = templateLookup.get_template(editTemplate)
 
     def render_view(self, request):
         obj = getattr(self.obj, self.col)
@@ -418,34 +419,28 @@ class ReferenceProxy(BaseProxy):
         refClass = reference._relation.remote_cls
         crudClass = getCrudClass(refClass)
 
+        # NTA TODO: Maybe just render_view?
         if self.col in noEdit or idCol in noEdit:
             obj = request.store.get(refClass, objID)
             return '<input type="hidden" name="warpform-%s" value="%s" />%s' % (
                 self.fieldName(), objID, crudClass(obj).name(request))
 
-        allObjs = [(crudClass(o).name(request), o) 
-                   for o in request.store.find(refClass, *self.conditions)]
-        allObjs.sort()
-
         if objID is None:
             if self.default is not None:
-                sel = lambda o: ' selected="selected"' if o.id == self.default.id else ''
+                selectedID = self.default.id
             else:
-                sel = lambda o: ""
+                selectedID = None
         else:
-            sel = lambda o: ' selected="selected"' if o.id == objID else ''
+            selectedID = objID
 
-        options = []
+        allObjs = list(request.store.find(refClass, *self.conditions))
+        allObjs.sort(key = lambda o: (crudClass(o).name(request), o))
 
-        if self.allowNone:
-            options.append('<option value="">[None]</option>')
-        
-        options.extend('<option value="%s"%s>%s</option>' % 
-                       (o.id, sel(o), name)
-                       for (name, o) in allObjs)
-
-        return '<select name="warpform-%s">\n%s\n</select>' % (
-            self.fieldName(), "\n".join(options))
+        return renderTemplateObj(
+            request, self.editTemplate, return_unicode = True,
+            fieldName = self.fieldName(),
+            selectedID = selectedID,
+            objs = allObjs)
 
 
     def save(self, val, request):
@@ -457,7 +452,7 @@ class ReferenceProxy(BaseProxy):
                 val = int(val)
         except ValueError:
             return u"Invalid value"
-            
+
         refClass = self.obj.__class__.__dict__[self.col]._relation.remote_cls
 
         if val is not None:
@@ -496,8 +491,8 @@ class ReferenceSetProxy(BaseProxy):
 
         template = templateLookup.get_template("/crud/list.mak")
 
-        return renderTemplateObj(request, 
-                                 template, 
+        return renderTemplateObj(request,
+                                 template,
                                  model=getCrudClass(refClass),
                                  presets=presets,
                                  postData=postData,
@@ -508,7 +503,7 @@ class ReferenceSetProxy(BaseProxy):
 
     def render_edit(self, request):
         return None
-        
+
 
 
 class EnumProxy(BaseProxy):
@@ -528,7 +523,7 @@ class EnumProxy(BaseProxy):
             if k == val:
                 return v
         return "Invalid (%s)" % val
-    
+
     def render_edit(self, request):
         val = getattr(self.obj, self.col)
         options = []
@@ -564,7 +559,7 @@ class StormEnumProxy(BaseProxy):
             get_map = obj.__class__.__dict__[col]._variable_kwargs['get_map']
         except KeyError:
             raise ValueError("No choices provided for Enum")
-                
+
         choices = sorted(get_map.iteritems())
 
         self.obj = obj
@@ -579,7 +574,7 @@ class StormEnumProxy(BaseProxy):
             return self.noneLabel
         return val
 
-    
+
     def render_edit(self, request):
         val = getattr(self.obj, self.col)
         options = []
