@@ -8,6 +8,7 @@ except ImportError:
 from warp.crud import colproxy, columns
 from warp import helpers
 
+
 class CrudModel(object):
 
     editRenderers = {
@@ -49,6 +50,10 @@ class CrudModel(object):
     }
 
     extraFacets = ()
+    noEdits = {
+        # "created": ALREADY_SET("created", "Changing creation timestamp is wrong"),
+        # "name": ALREADY_SET("id", "Name can only be set on creation"),
+    }
 
     def __init__(self, obj):
         self.obj = obj
@@ -68,9 +73,9 @@ class CrudModel(object):
         return None
 
     def linkAsParent(self, request):
-        return helpers.link(self.name(request), 
-                            helpers.getCrudNode(self), 
-                            "view", 
+        return helpers.link(self.name(request),
+                            helpers.getCrudNode(self),
+                            "view",
                             [self.obj.id])
 
 
@@ -106,19 +111,29 @@ class CrudModel(object):
 
 
     def renderEdit(self, colName, request):
+        when = self.noEdits.get(colName)
+        if when and when(self):
+            return self.renderView(colName, request)
+
         funcName = "render_edit_%s" % colName
         if hasattr(self, funcName):
             return getattr(self, funcName)(request)
         return self.getProxy(colName, request).render_edit(request)
 
-        
+
     def save(self, colName, val, request):
+        when = self.noEdits.get(colName)
+        if when:
+            error = when(self)
+            if error:
+                return error
+
         funcName = "save_%s" % colName
         if hasattr(self, funcName):
             return getattr(self, funcName)(val, request)
         return self.getProxy(colName, request).save(val, request)
 
-    
+
     @classmethod
     def listConditions(cls, model, request):
         conditions = []
@@ -128,3 +143,28 @@ class CrudModel(object):
             for (k, v) in where.iteritems():
                 conditions.append(getattr(model, k) == v)
         return conditions
+
+
+
+
+
+def ALWAYS(self):
+    return "Not editable"
+
+
+def ALREADY_SET(colName, message):
+    def when(self):
+        if getattr(self.obj, colName, None) is None:
+            return None
+        else:
+            return message
+    return when
+
+
+def noEdit(colNames, when = ALWAYS):
+    def decorate(crudClass):
+        crudClass.noEdits = crudClass.noEdits.copy()
+        for colName in colNames:
+            crudClass.noEdits[colName] = when
+        return crudClass
+    return decorate
