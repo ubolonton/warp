@@ -24,9 +24,9 @@ def makeSchema(store, dryRun=False):
     if name == "PostgresConnection":
         from schemup.dbs.postgres import PostgresSchema
         schemaClass = PostgresSchema
-    elif name == "MySQLConnection":
-        from schemup.dbs.mysql import MysqlSchema
-        schemaClass = MysqlSchema
+    # elif name == "MySQLConnection":
+    #     from schemup.dbs.mysql import MysqlSchema
+    #     schemaClass = MysqlSchema
     else:
         return None
 
