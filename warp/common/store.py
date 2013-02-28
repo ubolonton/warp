@@ -56,5 +56,32 @@ def getCreationSQL(store):
                     role_name BYTEA NOT NULL,
                     position INTEGER NOT NULL DEFAULT 0)"""),
                 ],
-            }
+            },
+        'MySQLConnection': {
+            'tableExists': lambda s, t: bool(s.execute("""
+                   SELECT count(*) FROM information_schema.tables
+                   WHERE table_schema = ? AND table_name=?""",
+               (URI(config['db']).database, t)).get_one()[0]),
+            'creations': [
+                ('warp_avatar', """
+                CREATE TABLE warp_avatar (
+                    id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    email VARCHAR(64),
+                    password VARCHAR(32),
+                    UNIQUE(email)
+                  ) engine=InnoDB, charset=utf8"""),
+                ('warp_session', """
+                CREATE TABLE warp_session (
+                    uid VARBINARY(32) NOT NULL PRIMARY KEY,
+                    avatar_id INTEGER REFERENCES warp_avatar(id) ON DELETE CASCADE
+                  ) engine=InnoDB, charset=utf8"""),
+                ('warp_avatar_role', """
+                CREATE TABLE warp_avatar_role (
+                    id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    avatar_id INTEGER NOT NULL REFERENCES warp_avatar(id) ON DELETE CASCADE,
+                    role_name VARBINARY(32) NOT NULL,
+                    position INTEGER NOT NULL
+                  ) engine=InnoDB, charset=utf8"""),
+                ],
+            },
     }.get(connType)
