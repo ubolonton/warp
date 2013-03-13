@@ -433,14 +433,16 @@ class ReferenceProxy(BaseProxy):
         else:
             selectedID = objID
 
-        allObjs = list(request.store.find(refClass, *self.conditions))
-        allObjs.sort(key = lambda o: (crudClass(o).name(request), o))
+        nameObjs = [(crudClass(o).name(request), o)
+                    for o in request.store.find(refClass, *self.conditions)]
+        nameObjs.sort()
 
         return renderTemplateObj(
             request, self.editTemplate, return_unicode = True,
             fieldName = self.fieldName(),
             selectedID = selectedID,
-            objs = allObjs)
+            nameObjs = nameObjs,
+            allowNone = self.allowNone)
 
 
     def save(self, val, request):
