@@ -30,7 +30,7 @@ def makeSchema(store, dryRun=False):
     else:
         return None
 
-    return schemaClass(store.get_database().raw_connect(), dryRun=dryRun)
+    return schemaClass(store._connection._raw_connection, dryRun=dryRun)
 
 # NTA TODO: All DB-related config should be grouped together
 def getConfig(config=config):
