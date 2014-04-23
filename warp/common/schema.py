@@ -111,6 +111,15 @@ def migrate(store=avatar_store, config=config, dryRun=False):
     if not dryRun:
         commands.validate(schema, stormSchema)
 
+    # This is needed because several schemup operations touch the DB
+    # through queries, but only "ensureSchemaTable" and "upgrade" end
+    # the transaction (when they need to persist data (committing)).
+    # TODO: The correct fix would be putting transaction start/end in
+    # single functions (either this or schemup's (both of which
+    # requires changing schemup)). Preferrably we want to separate
+    # actualy querying and transaction start/end management
+    store.rollback()
+
     if not sqls:
         print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
         print "Schema up-to-date"
