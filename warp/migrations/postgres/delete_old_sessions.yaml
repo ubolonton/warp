@@ -5,4 +5,4 @@ to: hxp_2
 depends:
   - [warp_session, warp_1]
 sql: |
-    CREATE INDEX ON warp_session (touched);
+    CREATE INDEX warp_session_touched_idx ON warp_session (touched);
